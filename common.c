@@ -801,6 +801,13 @@ void TChannel::VdrChannel(cChannel& c) {
   c.Parse(s.c_str());
 }
 
+static bool SourceMatches(int a, int b) {
+  static const int SatRotor = cSource::stSat | cSource::st_Any;
+
+  return (a == b or
+         (a == SatRotor and (b & cSource::stSat)));
+}
+
 bool TChannel::ValidSatIf() {
   int f = Frequency;
 
@@ -809,7 +816,8 @@ bool TChannel::ValidSatIf() {
   if (Setup.DiSEqC) {
      cDiseqc* d;
      for(d = Diseqcs.First(); d; d = Diseqcs.Next(d))
-        if (d->Source() == cSource::FromString(Source.c_str()) and d->Slof() > f and d->Polarization() == Polarization) {
+        if (SourceMatches(d->Source(), cSource::FromString(Source.c_str())) and
+            d->Slof() > f and d->Polarization() == Polarization) {
            f -= d->Lof();
            break;
            }

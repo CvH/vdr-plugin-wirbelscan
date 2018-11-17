@@ -143,8 +143,19 @@ void cStateMachine::Action(void) {
               MenuScanning->SetStr(0, false);
 
            cChannel c;
+
+           // skip ChannelID check in cChannel::Parse()
+           // we just want to tune here, nothing else.
+           int nid = Transponder->NID;
+           int sid = Transponder->SID;
+           Transponder->NID = 0x2000;
+           Transponder->SID = 0x2000;
+
            Transponder->VdrChannel(c);
            dev->SwitchChannel(&c, false);
+
+           Transponder->NID = nid;
+           Transponder->SID = sid;
 
            aReceiver = new cScanReceiver();
            dev->AttachReceiver(aReceiver);
@@ -309,7 +320,8 @@ void cStateMachine::Action(void) {
                  else
                     newState = eAddChannels;
               if (time(0) != tm) {
-                 MenuScanning->SetProgress(lProgress);
+                 if (MenuScanning)
+                    MenuScanning->SetProgress(lProgress);
                  tm = time(0);
                  }
               }

@@ -81,8 +81,17 @@ cDevice* GetPreferredDevice(TChannel* Channel) {
   std::string s;
   Channel->PrintTransponder(s);
   dlog(6, "'%s' %s", Channel->Source.c_str(), s.c_str());
+
+  // skip ChannelID check in cChannel::Parse()
+  // we just want to find a device here, nothing else.
+  int nid = Channel->NID;
+  int sid = Channel->SID;
+  Channel->NID = 0x2000;
+  Channel->SID = 0x2000;
   cChannel c;
   Channel->VdrChannel(c);
+  Channel->NID = nid;
+  Channel->SID = sid;
 
   dlog(4, "testing '%s'", *c.ToText());
 
@@ -99,6 +108,8 @@ cDevice* GetPreferredDevice(TChannel* Channel) {
      if (Channel->Source[0] == 'S' or Channel->Source[0] == 'T') {
         ch2nd = &c;
         ch2nd.DelSys = 1;
+        ch2nd.NID = 0x2000;
+        ch2nd.SID = 0x2000;
         ch2nd.VdrChannel(c);
         gen2 = dev->ProvidesTransponder(&c);
         }
@@ -823,7 +834,13 @@ void cScanner::Action(void) {
              MenuScanning->SetTransponder(aChannel);
              }
           aChannel->Tested = false;
+          int nid = aChannel->NID;
+          int sid = aChannel->SID;
+          aChannel->NID = 0x2000;
+          aChannel->SID = 0x2000;
           aChannel->VdrChannel(c);
+          aChannel->NID = nid;
+          aChannel->SID = sid;          
           dev->SwitchChannel(&c, false);
 
           {

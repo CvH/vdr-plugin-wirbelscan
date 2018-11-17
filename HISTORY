@@ -227,3 +227,12 @@ VDR Plugin 'wirbelscan' Revision History
   changed and updates (new channels counting etc.) are not possible any
   longer during scan.
 * T2: add scan loop
+
+2018-11-04
+-------------------------------------------------------------------------------
+* fix possible segfault, if remotely controlled (thanks to Luca Olivetti)
+* allow operation from positioner (thanks to Luca Olivetti)
+* silence a few useless vdr warnings during scan: "ERROR: channel data results in invalid ID!";
+  as a channel scanner doesnt have any valid channel IDs at the beginning of its work.
+
+  

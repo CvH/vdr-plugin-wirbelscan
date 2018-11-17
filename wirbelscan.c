@@ -13,7 +13,7 @@
 #include "countries.h"
 #include "satellites.h"
 
-static const char *VERSION        = "2017.06.04";
+static const char *VERSION        = "2018.11.04";
 static const char *DESCRIPTION    = "DVB channel scan for VDR";
 static const char *MAINMENUENTRY  = NULL; /* main menu -> use wirbelscancontrol plugin */
 const char* extVer  = VERSION;
