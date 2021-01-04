@@ -322,6 +322,10 @@ switch (channellist) {
                         default:        return  SKIP_CHANNEL;
                         }
         case DVBT_DE:  //GERMANY, 21..60, soon 21..48
+                switch (channel) {
+                        case 21 ... 59: return  306000000;
+                        default:        return  SKIP_CHANNEL;
+                        }
         case DVBT_FR:  //FRANCE, +/- offset 166kHz & +offset 332kHz & +offset 498kHz
         case DVBT_GB:  //UNITED KINGDOM, +/- offset
                 switch (channel) {

@@ -235,4 +235,40 @@ VDR Plugin 'wirbelscan' Revision History
 * silence a few useless vdr warnings during scan: "ERROR: channel data results in invalid ID!";
   as a channel scanner doesnt have any valid channel IDs at the beginning of its work.
 
-  
+2020-05-03
+-------------------------------------------------------------------------------
+* plugin maintainance after a few years
+* check for compat with vdr-2.4.1
+* changes in core VDR 2.4.1 cause now segfaults together with wirbelscan together
+  with rofafors SAT>IP plugin.
+
+  -> Solution: no longer try to query device information in case of SAT>IP.
+  Otherwise, complete Astra-19.2E is scanned using SAT>IP in 8 minutes, 15 seconds.
+  Not that bad for an very old dtv scanner inside VDR's jail, using an
+  emulated dvb device. :)
+
+2020-05-03
+-------------------------------------------------------------------------------
+* simplify InitSystems
+
+2020-12-06/2020-12-13
+-------------------------------------------------------------------------------
+* add channel export feature to wirbelscan_services for w_scan_cpp support
+* fix bugs if cDevice* casted c-Style to cDvbDevice*
+  Thanks to MarkusE @ vdr-portal.de
+* fix error messages if cast to cDvbDevice failed and device coulnt be opened.
+  Thanks to MarkusE @ vdr-portal.de
+* remove a few DVB-T/T2 freqs in DE (700M Band)
+* scan plp 0..3 for T2 (not an real fix, but should work good enough)
+* move {VERSION,DESCRIPTION,MAINMENUENTRY} to WIRBELSCAN_*
+* enable SAT>IP for C/T(2)
+* fix bug introduced by wrong packaging
+  Thanks to MarkusE @ vdr-portal.de
+
+2020-12-17
+-------------------------------------------------------------------------------
+* dynamite support broke satip support :(, fixed by removing dvb dev check.
+
+2020-12-22
+-------------------------------------------------------------------------------
+* add PMT Pid to TChannel - no change if used as a VDR Plugin.

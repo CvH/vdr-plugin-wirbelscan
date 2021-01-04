@@ -14,7 +14,7 @@ OBJS = $(shell ls *.c | sed -e 's/\.c/\.o/g')
 
 
 ### The version number of this plugin (taken from the main source file):
-VERSION = $(shell grep 'static const char \*VERSION *=' $(PLUGIN).c | awk '{ print $$6 }' | sed -e 's/[";]//g')
+VERSION = $(shell grep 'static const char \*WIRBELSCAN_VERSION *=' $(PLUGIN).c | awk '{ print $$6 }' | sed -e 's/[";]//g')
 
 
 ### The directory environment:
@@ -112,5 +112,6 @@ dist: $(I18Npo) clean
 	@echo Distribution package created as $(PACKAGE).tgz
 
 clean:
+	@-rm -f $(SOFILE) $(SOFILE).$(APIVERSION)
 	@-rm -f $(PODIR)/*.mo $(PODIR)/*.pot
 	@-rm -f $(OBJS) $(DEPFILE) *.so *.tgz core* *~

@@ -53,6 +53,7 @@ namespace WIRBELSCAN_SERVICE {
 #define SCountry "Country#0001"    // get list of country IDs and Names
 #define SSat     "Sat#0001"        // get list of satellite IDs and Names
 #define SUser    "User#0002"       // get/set single user transponder, GetUser#XXXX/SetUser#XXXX
+#define SExport  "Export#0001"     // raw data export
 
 /* --- wirbelscan_GetVersion -------------------------------------------------
  * Query wirbelscans versions, will fail only if plugin version doesnt support service at all.
@@ -116,7 +117,7 @@ typedef struct {
 typedef struct {
   uint16_t  verbosity;                           // 0 (errors only) .. 5 (extended debug); default = 3 (messages)
   uint16_t  logFile;                             // 0 = off, 1 = stdout, 2 = syslog
-  uint16_t DVB_Type;                             // DVB-T = 0, DVB-C = 1, DVB-S/S2 = 2, PVRINPUT = 3, PVRINPUT(FM Radio) = 4, ATSC = 5, TRANSPONDER = 999
+  uint16_t DVB_Type;                             // DVB-T = 0, DVB-C = 1, DVB-S/S2 = 2, ATSC = 5, TRANSPONDER = 999
   uint16_t DVBT_Inversion;                       // AUTO/OFF = 0, AUTO/ON = 1
   uint16_t DVBC_Inversion;                       // AUTO/OFF = 0, AUTO/ON = 1
   uint16_t DVBC_Symbolrate;                      // careful here - may change. AUTO = 0, 6900 = 1, 6875 = 2  (...)  14 = 5483, 15 = ALL

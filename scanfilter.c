@@ -248,11 +248,11 @@ void TThread::Cancel(int WaitSeconds) {
  ******************************************************************************/
 
 cPatScanner::cPatScanner(cDevice* Parent, struct TPatData& Dest) :
-  device(Parent), PatData(Dest), isActive(true)
+  device(Parent), PatData(Dest), isActive(true), hasPAT(false), anyBytes(false)
 {
   PatData.services.Clear();
   PatData.network_PID = 0;
-  hasPAT = false;
+  
   Sync.Reset();
   Start();
 }
@@ -273,13 +273,19 @@ void cPatScanner::Action(void) {
         dlog(0, "received signal (%p)", this);
         break;
         }
-     if (count++ > 500) { // > 5sec
-        isActive = false;
+     if (count++ > 1000) { // > 10sec
+        dlog(5, "%s: PAT timeout.", __PRETTY_FUNCTION__);
         break;
         }
+     else if ((count > 300) and not(anyBytes))
+        break;
      nbytes = device->ReadFilter(fd, buffer, sizeof(buffer));
-     if (nbytes > 0)
+     if (nbytes > 0) {
+        anyBytes = true;
         Process(buffer, nbytes);
+        }
+     if (hasPAT)
+        break;
      }
 
   isActive = false;
@@ -290,13 +296,16 @@ void cPatScanner::Action(void) {
 
 void cPatScanner::Process(const u_char* Data, int Length) {
   SI::PAT tsPAT(Data, false);
+  //dlog(5, "%s\n", __PRETTY_FUNCTION__);  
   if (!tsPAT.CheckCRCAndParse()) {
      hexdump("PAT CRC error", Data, Length);
      return;
      }
 
-  if (!Sync.Sync(tsPAT.getVersionNumber(), tsPAT.getSectionNumber(), tsPAT.getLastSectionNumber()))
+  if (!Sync.Sync(tsPAT.getVersionNumber(), tsPAT.getSectionNumber(), tsPAT.getLastSectionNumber())) {
+     dlog(4, "%s: wait for PAT Sync\n", __PRETTY_FUNCTION__);
      return;
+     }
 
   if (wSetup.verbosity > 5)
      hexdump("PAT", Data, Length);
@@ -318,7 +327,7 @@ void cPatScanner::Process(const u_char* Data, int Length) {
 
   // all parts of PAT seen.
   if (tsPAT.getSectionNumber() == tsPAT.getLastSectionNumber())
-     isActive = false;
+     hasPAT = true;
 }
 
 
@@ -539,9 +548,13 @@ void cPmtScanner::Process(const u_char* Data, int Length) {
  ******************************************************************************/
 
 cNitScanner::cNitScanner(cDevice* Parent, uint16_t network_PID, TNitData& Data, int Type) :
-  active(true), device(Parent), nit(network_PID), data(Data), type(Type)
+  active(true), device(Parent), nit(network_PID), data(Data), type(Type), hasNIT(false),
+  anyBytes(false)
 {
   first_crc32 = 0;
+
+  west = Data.West;
+  orbital = Data.OrbitalPos;
   Start();
 }
 
@@ -560,11 +573,19 @@ void cNitScanner::Action(void) {
      if (wait.Wait(10)) {
         break;
         }
-     if (count++ > 4000)     // 4000 x 10msec = 40sec
-        active = false;
+     if (count++ > 4000) {   // 4000 x 10msec = 40sec
+        dlog(2, "NIT timeout\n");
+        break;
+        }
+     else if ((count > 1800) and not(anyBytes))
+        break;
      nbytes = device->ReadFilter(fd, buffer, sizeof(buffer));
-     if (nbytes > 0)
-        Process(buffer, nbytes);  
+     if (nbytes > 0) {
+        anyBytes = true;
+        Process(buffer, nbytes);
+        }
+     if (hasNIT)
+        break;
      }
   active = false;
   device->CloseFilter(fd);
@@ -661,7 +682,7 @@ void cNitScanner::Process(const u_char* Data, int Length) {
   uint32_t crc32 = Data[len-4] << 24 | Data[len-3] << 16 | Data[len-2] << 8 | Data[len-1];
 
   if (first_crc32 == crc32) {
-     active = false;
+     hasNIT = true;
      return;
      }
 
@@ -746,6 +767,16 @@ void cNitScanner::Process(const u_char* Data, int Length) {
               int RollOff = 35;
               int Modulation = 2;
               int System = 0;
+              bool west_flag = sd->getWestEastFlag() == 0;
+
+              // orbital = 192 (C0), Source = 1392509120 (530000C0)
+              
+              if ((west_flag != west) or ( abs(BCD2INT(sd->getOrbitalPosition()) - orbital) > 2 )) {
+                 dlog(4, "expected: %.1f%c - got %.1f%c. Skipped.\n",
+                          orbital/10.0, west?'W':'E',
+                          BCD2INT(sd->getOrbitalPosition())/10.0, west_flag?'W':'E');
+                 continue;
+                 }
 
               if ((System = sd->getModulationSystem())) {
                  // {DVB-S2}
@@ -1226,7 +1257,8 @@ TChannel* GetByTransponder(const TChannel* Transponder) {
  * cSdtScanner
  ******************************************************************************/
 cSdtScanner::cSdtScanner(cDevice * Parent, TSdtData& Data) : 
-  active(true), device(Parent), data(Data)
+  active(true), device(Parent), data(Data), hasSDT(false),
+  anyBytes(false)
 {
   data.original_network_id = 0;
   first_crc32 = 0;
@@ -1251,17 +1283,23 @@ void cSdtScanner::Action(void) {
         }
      if (count++ > 4000) { //40sec
         dlog(2, "SDT timeout\n");
-        active = false;
         break;
         }
+     else if ((count > 1800) and not(anyBytes))
+        break;
      nbytes = device->ReadFilter(fd, buffer, sizeof(buffer));
-     if (nbytes > 0)
+     if (nbytes > 0) {
+        anyBytes = true;
         Process(buffer, nbytes);
+        }
+     if (hasSDT)
+        break;
      }
-  active = false;
 
+  active = false;
   device->CloseFilter(fd);
   fd = -1;
+  //Cancel();
 }
 
 void cSdtScanner::Process(const u_char* Data, int Length) {
@@ -1274,7 +1312,7 @@ void cSdtScanner::Process(const u_char* Data, int Length) {
   uint32_t crc32 = Data[len-4] << 24 | Data[len-3] << 16 | Data[len-2] << 8 | Data[len-1];
 
   if (first_crc32 == crc32) {
-     active = false;
+     hasSDT = true;
      return;
      }
 

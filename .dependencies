@@ -1,0 +1,21 @@
+common.o: common.c common.h dvb_wrapper.h extended_frontend.h tlist.h \
+ menusetup.h scanner.h scanfilter.h si_ext.h statemachine.h
+countries.o: countries.c countries.h scan.h common.h dvb_wrapper.h \
+ extended_frontend.h tlist.h
+dvb_wrapper.o: dvb_wrapper.c common.h dvb_wrapper.h extended_frontend.h \
+ tlist.h
+menusetup.o: menusetup.c menusetup.h scanner.h dvb_wrapper.h \
+ extended_frontend.h scanfilter.h si_ext.h common.h tlist.h \
+ statemachine.h satellites.h countries.h wirbelscan.h
+satellites.o: satellites.c scan.h common.h dvb_wrapper.h \
+ extended_frontend.h tlist.h satellites.h satellites.dat
+scanfilter.o: scanfilter.c scanfilter.h si_ext.h common.h dvb_wrapper.h \
+ extended_frontend.h tlist.h menusetup.h scanner.h statemachine.h
+scanner.o: scanner.c scanner.h dvb_wrapper.h extended_frontend.h \
+ scanfilter.h si_ext.h common.h tlist.h statemachine.h menusetup.h \
+ satellites.h countries.h wirbelscan_services.h
+statemachine.o: statemachine.c statemachine.h scanfilter.h si_ext.h \
+ common.h dvb_wrapper.h extended_frontend.h tlist.h menusetup.h scanner.h
+wirbelscan.o: wirbelscan.c wirbelscan.h wirbelscan_services.h menusetup.h \
+ scanner.h dvb_wrapper.h extended_frontend.h scanfilter.h si_ext.h \
+ common.h tlist.h statemachine.h countries.h satellites.h

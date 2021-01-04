@@ -106,6 +106,8 @@ struct TFrequencyListItem {
 };
 
 struct TNitData {
+  int OrbitalPos;
+  bool West;
   TList<TFrequencyListItem> frequency_list;
   TList<TCell> cell_frequency_links;
   TList<TServiceListItem> service_types;
@@ -142,6 +144,7 @@ private:
   cCondWait wait;
   TChannel channel;
   bool hasPAT;
+  bool anyBytes;
 protected:
   virtual void Process(const u_char* Data, int Length);
   virtual void Action(void);
@@ -186,7 +189,10 @@ private:
   TNitData& data;
   uint32_t first_crc32;
   int type;
-
+  bool hasNIT;
+  bool west;
+  uint16_t orbital;
+  bool anyBytes;
   void ParseCellFrequencyLinks(uint16_t network_id, const u_char* Data, TList<TCell>& list);
 protected:
   virtual void Process(const u_char* Data, int Length);
@@ -196,7 +202,7 @@ public:
   cNitScanner(cDevice* Parent, uint16_t network_PID, TNitData& Data, int Type);
   ~cNitScanner();
   bool Active() { return (active); };
-
+  bool HasNIT() { return hasNIT; };
 };
 
 /*******************************************************************************
@@ -210,6 +216,8 @@ private:
   std::string s;
   cCondWait wait;
   uint32_t first_crc32;
+  bool hasSDT;
+  bool anyBytes;
 protected:
   virtual void Process(const u_char* Data, int Length);
   virtual void Action(void);
@@ -217,6 +225,7 @@ public:
   cSdtScanner(cDevice* Parent, TSdtData& Data);
   ~cSdtScanner();
   bool Active(void) { return active; };
+  bool SdtNIT() { return hasSDT; };
 };
 
 #endif

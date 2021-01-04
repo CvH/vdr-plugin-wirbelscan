@@ -100,7 +100,7 @@ cMenuSettings::cMenuSettings() {
   SetSection(tr("Setup"));
   AddCategory(tr("General"));
   Add(new cMenuEditStraItem(tr("Source Type"), (int*) &wSetup.DVB_Type,  6, DVB_Types));
-  Add(new cMenuEditIntItem (tr("verbosity"),          &wSetup.verbosity, 0, 5));
+  Add(new cMenuEditIntItem (tr("verbosity"),          &wSetup.verbosity, 0, 6));
   Add(new cMenuEditStraItem(tr("logfile"),            &wSetup.logFile,   3, logfiles));
 
   AddCategory(tr("Channels"));

@@ -6,10 +6,24 @@
 
 #include <linux/dvb/frontend.h>
 #include <linux/dvb/version.h>
+#include <vdr/device.h>
 #include <vdr/dvbdevice.h>
 #include "common.h"
 #include "dvb_wrapper.h"
 
+
+cDvbDevice* GetDvbDevice(cDevice* d) {
+  if (d == nullptr)
+     return nullptr;
+
+  #ifdef __DYNAMIC_DEVICE_PROBE
+     /* vdr/device.h was patched for dynamite plugin */
+     if (d->HasSubDevice())
+        return dynamic_cast<cDvbDevice*>(d->SubDevice());
+  #endif
+
+  return dynamic_cast<cDvbDevice*>(d);
+}
 
 void PrintDvbApi(std::string& s) {
   s = "compiled for DVB API ";
@@ -18,8 +32,10 @@ void PrintDvbApi(std::string& s) {
   s += c;
 }
 
-unsigned int GetFrontendStatus(cDevice * dev) {
-  cDvbDevice* dvbdevice = (cDvbDevice*) dev;
+unsigned int GetFrontendStatus(cDevice* dev) {
+  cDvbDevice* dvbdevice = GetDvbDevice(dev);
+  if (dvbdevice == nullptr) return 0; 
+
   fe_status_t value;
   char devstr[256];
   snprintf(devstr, 256, "/dev/dvb/adapter%d/frontend%d",
@@ -28,12 +44,12 @@ unsigned int GetFrontendStatus(cDevice * dev) {
 
   int fe = open(devstr, O_RDONLY | O_NONBLOCK);
   if (fe < 0) {
-     dlog(0, "%s: could not open %s", __FUNCTION__, *devstr);
+     dlog(0, "%s: could not open %s", __FUNCTION__, devstr);
      return 0;
      }
   if (IOCTL(fe, FE_READ_STATUS, &value) < 0) {
      close(fe);
-     dlog(0, "%s: could not read %s", __FUNCTION__, *devstr);
+     dlog(0, "%s: could not read %s", __FUNCTION__, devstr);
      return 0;
      }
   close(fe);
@@ -41,8 +57,10 @@ unsigned int GetFrontendStatus(cDevice * dev) {
 }
 
 
-unsigned int GetCapabilities(cDevice * dev) {
-  cDvbDevice* dvbdevice = (cDvbDevice*) dev;
+unsigned int GetCapabilities(cDevice* dev) {
+  cDvbDevice* dvbdevice = GetDvbDevice(dev);
+  if (dvbdevice == nullptr) return 0;
+
   struct dvb_frontend_info fe_info;
   char devstr[256];
   snprintf(devstr, 256, "/dev/dvb/adapter%d/frontend%d",
@@ -50,12 +68,14 @@ unsigned int GetCapabilities(cDevice * dev) {
                         dvbdevice->Frontend());
 
   int fe = open(devstr, O_RDONLY | O_NONBLOCK);
-  if (fe < 0)
+  if (fe < 0) {
+     dlog(0, "%s: could not open %s", __FUNCTION__, devstr);
      return 0;
+     }
 
   if (IOCTL(fe, FE_GET_INFO, &fe_info) < 0) {
      close(fe);
-     dlog(0, "%s: could not read %s", __FUNCTION__, *devstr);
+     dlog(0, "%s: could not read %s", __FUNCTION__, devstr);
      return 0;
      }
   close(fe);
@@ -82,7 +102,7 @@ bool GetTerrCapabilities(cDevice* dev, bool* CodeRate, bool* Modulation, bool* I
 
 bool GetCableCapabilities(cDevice* dev, bool* Modulation, bool* Inversion) {
   int cap = GetCapabilities(dev);
-  if (cap < 0)
+  if (cap == 0)
      return false;
 
   *Modulation       = cap & FE_CAN_QAM_AUTO;
@@ -93,7 +113,7 @@ bool GetCableCapabilities(cDevice* dev, bool* Modulation, bool* Inversion) {
 
 bool GetAtscCapabilities(cDevice* dev, bool* Modulation, bool* Inversion, bool* VSB, bool* QAM) {
   int cap = GetCapabilities(dev);
-  if (cap < 0)
+  if (cap == 0)
      return false;
 
   *Modulation       = cap & FE_CAN_QAM_AUTO;
@@ -106,7 +126,7 @@ bool GetAtscCapabilities(cDevice* dev, bool* Modulation, bool* Inversion, bool* 
 
 bool GetSatCapabilities(cDevice * dev, bool *CodeRate, bool *Modulation, bool *RollOff, bool *DvbS2) {
   int cap = GetCapabilities(dev);
-  if (cap < 0)
+  if (cap == 0)
      return false;
   *CodeRate         = cap & FE_CAN_FEC_AUTO;
   *Modulation       = cap & FE_CAN_QAM_AUTO;

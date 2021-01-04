@@ -186,6 +186,7 @@ void cScanner::Action(void) {
   int mod_parm, modulation_min = 0, modulation_max = 1;
   int sr_parm, dvbc_symbolrate_min = 0, dvbc_symbolrate_max = 1;
   int sys_parm = 0, thisSystem = -1;
+  int streamid_parm = 0;
   int channel, channel_min = 0, channel_max = 133;
   int offs, freq_offset_min = 0, freq_offset_max = 2;
   int this_channellist = DVBT_DE, this_bandwidth = 8, this_qam = 999, atsc = ATSC_VSB, dvb;
@@ -251,9 +252,10 @@ void cScanner::Action(void) {
             case SCAN_SATELLITE:
                dvb = frontend_type    = SCAN_SATELLITE;
                aChannel->Source       = sat_list[t->Id()].source_id;
-               aChannel->OrbitalPos   = sat_list[t->Id()].west_east_flag ?
-                                        -1 * BCD2INT(sat_list[t->Id()].orbital_position) :
-                                             BCD2INT(sat_list[t->Id()].orbital_position);
+               aChannel->West         = sat_list[t->Id()].west_east_flag == WEST_FLAG;
+               aChannel->OrbitalPos   = aChannel->West ?
+                                         BCD2INT(0x3600) - BCD2INT(sat_list[t->Id()].orbital_position) :
+                                                           BCD2INT(sat_list[t->Id()].orbital_position);
                aChannel->Frequency    = t->Frequency();
                aChannel->Symbolrate   = t->Symbolrate();
                aChannel->Polarization = t->Polarisation() == 0 ? 'H':
@@ -283,8 +285,47 @@ void cScanner::Action(void) {
            DELETENULL(aChannel);
            return;
            }
-        // we need to have here devices that derive from cDvbDevice!
-        hasDvbDevnode = true;
+
+        if (std::string(dev->DeviceName()).find("SAT>IP") == std::string::npos) {
+           hasDvbDevnode = GetDvbDevice(dev) != nullptr;
+           PrintDvbApi(s);
+           dlog(5, "%s", s.c_str());
+
+           switch(t->Type()) {
+               case SCAN_TERRESTRIAL:
+                  if (! GetTerrCapabilities(dev, &crAuto, &modAuto, &invAuto, &bwAuto, &hAuto, &tmAuto, &gAuto, &t2Support))
+                     dlog(0, "ERROR: Could not query capabilites.");
+                  break;
+               case SCAN_CABLE:
+                  if (! GetCableCapabilities(dev, &modAuto, &invAuto))
+                     dlog(0, "ERROR: Could not query capabilites.");
+                  break;
+               case SCAN_SATELLITE:
+                  if (! GetSatCapabilities(dev, &crAuto, &modAuto, &roAuto, &s2Support))
+                     dlog(0, "ERROR: Could not query capabilites.");
+                  break;
+               case SCAN_TERRCABLE_ATSC:
+                  if (! GetAtscCapabilities(dev, &modAuto, &invAuto, &vsbSupport, &qamSupport))
+                     dlog(0, "ERROR: Could not query capabilites.");
+                  break;
+               default:;
+               }
+           }
+        else {
+           crAuto    = 0;
+           modAuto   = 0;
+           invAuto   = 0;
+           bwAuto    = 0;
+           hAuto     = 0;
+           tmAuto    = 0;
+           gAuto     = 0;
+           t2Support = 1;
+           crAuto    = 0;
+           modAuto   = 0;
+           roAuto    = 0;
+           s2Support = 1;
+           hasDvbDevnode = false;
+           }
         deviceName = dev->DeviceName();
         dlog(3, "frontend %s", deviceName.c_str());     
         if (MenuScanning)
@@ -321,12 +362,25 @@ void cScanner::Action(void) {
               return;
               }
            }
-        // we need to have here devices that derive from cDvbDevice!
-        hasDvbDevnode = true;
-        PrintDvbApi(s);
-        dlog(5, "%s", s.c_str());
-        if (! GetTerrCapabilities(dev, &crAuto, &modAuto, &invAuto, &bwAuto, &hAuto, &tmAuto, &gAuto, &t2Support))
-           dlog(0, "ERROR: Could not query capabilites.");
+
+        if (std::string(dev->DeviceName()).find("SAT>IP") == std::string::npos) {
+           hasDvbDevnode = GetDvbDevice(dev) != nullptr;
+           PrintDvbApi(s);
+           dlog(5, "%s", s.c_str());
+           if (! GetTerrCapabilities(dev, &crAuto, &modAuto, &invAuto, &bwAuto, &hAuto, &tmAuto, &gAuto, &t2Support))
+              dlog(0, "ERROR: Could not query capabilites.");
+           }
+        else {
+           crAuto    = 0;
+           modAuto   = 0;
+           invAuto   = 0;
+           bwAuto    = 0;
+           hAuto     = 0;
+           tmAuto    = 0;
+           gAuto     = 0;
+           t2Support = 1;
+           hasDvbDevnode = false;
+           }
         deviceName = dev->DeviceName();
         dlog(3, "frontend %s", deviceName.c_str());     
         if (MenuScanning)
@@ -380,8 +434,9 @@ void cScanner::Action(void) {
         modulation_min = 0;
         modulation_max = t2Support ? 1 : 0;
         sys_parm = 0;
-        // disable symbolrate loop
-        dvbc_symbolrate_min = dvbc_symbolrate_max = 0;
+        // use srate as plp 0/1 to avoid a further loop.
+        dvbc_symbolrate_min = 0;
+        dvbc_symbolrate_max = t2Support ? 3 : 0;
         break;
         }
      case SCAN_CABLE: {
@@ -405,12 +460,19 @@ void cScanner::Action(void) {
            DELETENULL(aChannel);
            return;
            }
-        // we need to have here devices that derive from cDvbDevice!
-        hasDvbDevnode = true;
-        PrintDvbApi(s);
-        dlog(5, "%s", s.c_str());
-        if (! GetCableCapabilities(dev, &modAuto, &invAuto))
-           dlog(0, "ERROR: Could not query capabilites.");   
+
+        if (std::string(dev->DeviceName()).find("SAT>IP") == std::string::npos) {
+           hasDvbDevnode = GetDvbDevice(dev) != nullptr;
+           PrintDvbApi(s);
+           dlog(5, "%s", s.c_str());
+           if (! GetCableCapabilities(dev, &modAuto, &invAuto))
+              dlog(0, "ERROR: Could not query capabilites.");
+           }
+        else {
+           invAuto   = 0;
+           modAuto   = 0;
+           hasDvbDevnode = false;
+           }  
         deviceName = dev->DeviceName();
         dlog(3, "frontend %s", deviceName.c_str());
         if (MenuScanning)
@@ -464,9 +526,10 @@ void cScanner::Action(void) {
         aChannel = new TChannel;
         aChannel->Name         = "???";
         aChannel->Source       = sat_list[this_channellist].source_id;
-        aChannel->OrbitalPos   = sat_list[this_channellist].west_east_flag ?
-                                   -1 * BCD2INT(sat_list[this_channellist].orbital_position) :
-                                        BCD2INT(sat_list[this_channellist].orbital_position);
+        aChannel->West         = sat_list[this_channellist].west_east_flag == WEST_FLAG;
+        aChannel->OrbitalPos   = aChannel->West ?
+                                  BCD2INT(0x3600) - BCD2INT(sat_list[this_channellist].orbital_position) :
+                                                    BCD2INT(sat_list[this_channellist].orbital_position);
         aChannel->Frequency    = sat_list[this_channellist].items[0].intermediate_frequency;
         aChannel->Polarization = p[sat_list[this_channellist].items[0].polarization];
         aChannel->Symbolrate   = 27500;
@@ -489,12 +552,20 @@ void cScanner::Action(void) {
               }
            }
 
-        // we need to have here devices that derive from cDvbDevice!
-        hasDvbDevnode = true;
-        PrintDvbApi(s);
-        dlog(5, "%s", s.c_str());
-        if (! GetSatCapabilities(dev, &crAuto, &modAuto, &roAuto, &s2Support))
-           dlog(0, "ERROR: Could not query capabilites.");
+        if (std::string(dev->DeviceName()).find("SAT>IP") == std::string::npos) {
+           hasDvbDevnode = GetDvbDevice(dev) != nullptr;
+           PrintDvbApi(s);
+           dlog(5, "%s", s.c_str());
+           if (! GetSatCapabilities(dev, &crAuto, &modAuto, &roAuto, &s2Support))
+              dlog(0, "ERROR: Could not query capabilites.");
+           }
+        else {
+           crAuto    = 0;
+           modAuto   = 0;
+           roAuto    = 0;
+           s2Support = 1;
+           hasDvbDevnode = false;
+           }
         if (caps_s2) s2Support = 1;
         deviceName = dev->DeviceName();
         dlog(3, "frontend %s", deviceName.c_str());
@@ -543,12 +614,21 @@ void cScanner::Action(void) {
            DELETENULL(aChannel);
            return;
            }
-        // we need to have here devices that derive from cDvbDevice!
-        hasDvbDevnode = true;
-        PrintDvbApi(s);
-        dlog(5, "%s", s.c_str());
-        if (! GetAtscCapabilities(dev, &modAuto, &invAuto, &vsbSupport, &qamSupport))
-           dlog(0, "ERROR: Could not query capabilites.");
+
+        if (std::string(dev->DeviceName()).find("SAT>IP") == std::string::npos) {
+           hasDvbDevnode = GetDvbDevice(dev) != nullptr;
+           PrintDvbApi(s);
+           dlog(5, "%s", s.c_str());
+           if (! GetAtscCapabilities(dev, &modAuto, &invAuto, &vsbSupport, &qamSupport))
+              dlog(0, "ERROR: Could not query capabilites.");
+           }
+        else {
+           modAuto    = 0;
+           invAuto    = 0;
+           vsbSupport = 1;
+           qamSupport = 1;
+           hasDvbDevnode = false;
+           }
         deviceName = dev->DeviceName();
         dlog(3, "frontend %s", deviceName.c_str());
         if (MenuScanning)
@@ -629,6 +709,14 @@ void cScanner::Action(void) {
                    dlog(4, "Scanning DVB-T%s...", sys_parm?"2":"");
                    }
 
+                if (sys_parm == 0) {
+                   // DVB-T: no plp, skip plp loop.
+                   streamid_parm = 0;
+                   sr_parm = dvbc_symbolrate_max;
+                   }
+                else {
+                   streamid_parm = sr_parm;  // NOTE: sr_parm is abused as 'plp'
+                   }
                 f = chan_to_freq(channel, this_channellist);
                 if (!f)
                    continue; //skip unused channels
@@ -662,7 +750,7 @@ void cScanner::Action(void) {
                 aChannel->TID = 0;
                 aChannel->SID = 0;
                 aChannel->RID = 0;
-                aChannel->StreamId = 0;
+                aChannel->StreamId = streamid_parm;
                 aChannel->SystemId = 0;
 
                 aChannel->PrintTransponder(s);
@@ -849,12 +937,6 @@ void cScanner::Action(void) {
           if (MenuScanning)
              MenuScanning->SetStr(0, false);
 
-          if (!hasDvbDevnode) {
-             // if we're here, i have added some new stuff and forgot something.
-             dlog(0, "ERROR: no dvb device node defined!");
-             goto stop;
-             }
-
           cCondWait::SleepMs(1000);
           if (isSatip or GetFrontendStatus(dev) & FE_HAS_SIGNAL) 
              lock = dev->HasLock(3000);
@@ -862,7 +944,7 @@ void cScanner::Action(void) {
              lock = false;
 
           if (lock) {
-             lStrength = ((cDvbDevice*) dev)->SignalStrength();
+             lStrength = dev->SignalStrength();
              if (lStrength < 0 or lStrength > 100)
                 lStrength = 0;
              if (MenuScanning)

@@ -13,23 +13,23 @@
 #include "countries.h"
 #include "satellites.h"
 
-static const char *VERSION        = "2018.11.04";
-static const char *DESCRIPTION    = "DVB channel scan for VDR";
-static const char *MAINMENUENTRY  = NULL; /* main menu -> use wirbelscancontrol plugin */
-const char* extVer  = VERSION;
-const char* extDesc = DESCRIPTION;
+static const char *WIRBELSCAN_VERSION        = "2020.12.22";
+static const char *WIRBELSCAN_DESCRIPTION    = "DVB channel scan for VDR";
+static const char *WIRBELSCAN_MAINMENUENTRY  = NULL; /* main menu -> use wirbelscancontrol plugin */
+const char* extVer  = WIRBELSCAN_VERSION;
+const char* extDesc = WIRBELSCAN_DESCRIPTION;
 cPluginWirbelscan* thisPlugin;
 
 const char* cPluginWirbelscan::Version(void) {
-  return VERSION;
+  return WIRBELSCAN_VERSION;
 }
 
 const char* cPluginWirbelscan::Description(void) {
-  return DESCRIPTION; //return I18nTranslate(DESCRIPTION, "vdr-wirbelscan");
+  return WIRBELSCAN_DESCRIPTION; //return I18nTranslate(WIRBELSCAN_DESCRIPTION, "vdr-wirbelscan");
 }
 
 const char* cPluginWirbelscan::MainMenuEntry(void) {
-  return MAINMENUENTRY;
+  return WIRBELSCAN_MAINMENUENTRY;
 }
 
 // constructor
@@ -148,7 +148,7 @@ void cPluginWirbelscan::StoreSetup(void) {
 /* convert service strings to zero based int, -1 on error
  */
 int cPluginWirbelscan::servicetype(const char* id, bool init) {
-  static char strings[9][32];
+  static char strings[10][32];
   int num = sizeof(strings) / sizeof(strings[0]);
   int i = 0;
 
@@ -162,6 +162,7 @@ int cPluginWirbelscan::servicetype(const char* id, bool init) {
      sprintf(strings[i++], "%sGet%s", SPlugin, SCountry);
      sprintf(strings[i++], "%sGet%s", SPlugin, SUser);
      sprintf(strings[i++], "%sSet%s", SPlugin, SUser);
+     sprintf(strings[i++], "%s%s"   , SPlugin, SExport);
      }
 
   for(i = 0; i < num; i++) {
@@ -177,15 +178,15 @@ bool cPluginWirbelscan::Service(const char* id, void* Data) {
      case 0: { // info
         if (! Data) return true; // check for support.
         cWirbelscanInfo* info = (cWirbelscanInfo*) Data;
-        info->PluginVersion  = VERSION;
+        info->PluginVersion  = WIRBELSCAN_VERSION;
         info->CommandVersion = SCommand;
         info->StatusVersion  = SStatus;
         info->SetupVersion   = SSetup;
         info->CountryVersion = SCountry;
         info->SatVersion     = SSat;
         info->UserVersion    = SUser;   // 0.0.5-pre12b
-        info->reserved2      = VERSION; // may change later.
-        info->reserved3      = VERSION; // may change later.
+        info->reserved2      = WIRBELSCAN_VERSION; // may change later.
+        info->reserved3      = WIRBELSCAN_VERSION; // may change later.
         return true;
         }
      case 1: { // status
@@ -309,6 +310,16 @@ bool cPluginWirbelscan::Service(const char* id, void* Data) {
         wSetup.user[2] = *((uint32_t*) Data + 2);
         return true;
         }
+     case 9: { // Export
+        if (! Data) return true; // check for support
+        extern TChannels NewChannels;
+        std::vector<TChannel>* list = (std::vector<TChannel>*) Data;
+        for(int idx = 0; idx < NewChannels.Count(); ++idx) {
+           TChannel t = *NewChannels[idx];
+           list->push_back(t);
+           }
+        return true;
+        }
      default:
         return false;
      }
@@ -409,7 +420,7 @@ cString cPluginWirbelscan::SVDRPCommand(const char* Command, const char* Option,
                             "country api:    %s\n"
                             "sat api:        %s\n"
                             "user api:       %s",
-                            VERSION,
+                            WIRBELSCAN_VERSION,
                             wSetup.verbosity,
                             wSetup.logFile,
                             wSetup.DVB_Type,
@@ -453,4 +464,6 @@ cString cPluginWirbelscan::SVDRPCommand(const char* Command, const char* Option,
   return NULL;
 }
 
-VDRPLUGINCREATOR(cPluginWirbelscan); // Don't touch this!
+#ifndef STATIC_PLUGINS
+VDRPLUGINCREATOR(cPluginWirbelscan);
+#endif
