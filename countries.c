@@ -333,8 +333,7 @@ switch (channellist) {
         case DVBC_QAM: //EUROPE
                 switch (channel) {
                       //case  0 ... 1:  
-                        case  5 ... 12: return   73000000;
-                        case 22 ... 90: return  138000000;
+                        case  0 ... 93: return  114000000;
                         default:        return  SKIP_CHANNEL;
                         }
         case DVBC_FI:  //FINLAND, QAM128
