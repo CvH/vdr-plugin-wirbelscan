@@ -241,15 +241,18 @@ void cStateMachine::Action(void) {
            break;
 
         case eScanPat:
-           if (PatScanner == NULL)
+           if (PatScanner == NULL) {
               PatScanner = new cPatScanner(dev, PatData);
+              cCondWait::SleepMs(100);
+              }
            else if (!PatScanner->Active()) {
               pmtstart = true;
-              dlog(4, "searching %d services", PatData.services.Count());
-              if (stop or !PatScanner->HasPAT())
+              if (stop or !PatScanner->HasPAT() or !PatData.services.Count())
                  newState = eDetachReceiver;
-              else
+              else {
+                 dlog(4, "searching %d services", PatData.services.Count());
                  newState = eScanPmt;
+                 }
               break;
               }
            break;
@@ -310,6 +313,8 @@ void cStateMachine::Action(void) {
               if (wSetup.DVBC_Network_PID != 0x10)
                  PatData.network_PID = wSetup.DVBC_Network_PID;
               SdtData.original_network_id = 0;
+              NitData.OrbitalPos = initial->OrbitalPos;
+              NitData.West       = initial->West;
               NitScanner = new cNitScanner(dev, PatData.network_PID, NitData, dvbtype);
               SdtScanner = new cSdtScanner(dev, SdtData);
               }
@@ -424,6 +429,7 @@ void cStateMachine::Action(void) {
               n->DPIDs = PmtData[i]->Dpids;
               n->SPIDs = PmtData[i]->Spids;
               n->CAIDs = PmtData[i]->Caids;
+              n->PMT = PmtData[i]->program_map_PID;
 
               if (!n->VPID.PID and !n->APIDs.Count() and !n->DPIDs.Count()) {
                  delete n;

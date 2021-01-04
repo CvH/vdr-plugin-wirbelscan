@@ -21,6 +21,7 @@
 
 #define STDOUT                  1
 #define SYSLOG                  2
+#define STDERR                  3
 
 #define ADAPTER_AUTO            0
 
@@ -150,9 +151,11 @@ public:
   int NID;                 // Network ID
   int TID;                 // Transport stream ID
   int RID;                 // just to mark invalid channels.
+  int PMT;
   bool free_CA_mode;
   uint16_t service_type;
   int  OrbitalPos;
+  bool West;
   bool reported;
   bool Tunable;
   bool Tested;

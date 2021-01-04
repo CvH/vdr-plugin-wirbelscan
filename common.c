@@ -40,26 +40,20 @@ cMySetup::cMySetup() {
 }
 
 void cMySetup::InitSystems(void) {
+  int nDevices = cDevice::NumDevices();
+
   memset(&systems[0], 0, sizeof(systems));
   while(! cDevice::WaitForAllDevicesReady(20)) sleep(1);
 
-  for(int i = 0; i < cDevice::NumDevices(); i++) {
+  for(int i = 0; i < nDevices; i++) {
      cDevice* device = cDevice::GetDevice(i);
-     if (device == NULL) continue;
-     std::string t = *device->DeviceType();
-     if (t == "DVB-C" ) systems[SCAN_CABLE         ] = 1;
-     if (t == "DVB-T" ) systems[SCAN_TERRESTRIAL   ] = 1;
-     if (t == "DSS"   ) systems[SCAN_SATELLITE     ] = 1;
-     if (t == "DVB-S" ) systems[SCAN_SATELLITE     ] = 1;
-     if (t == "DVB-S2") systems[SCAN_SATELLITE     ] = 1;
-     if (t == "ATSC"  ) systems[SCAN_TERRCABLE_ATSC] = 1;
-     if (t == "DVB-T2") systems[SCAN_TERRESTRIAL   ] = 1;
-     if (t == "TURBO" ) systems[SCAN_SATELLITE     ] = 1;
-     if (t == "SAT>IP") {
-        if (device->ProvidesSource(cSource::FromString("S"))) systems[SCAN_SATELLITE     ] = 1;
-        if (device->ProvidesSource(cSource::FromString("T"))) systems[SCAN_TERRESTRIAL   ] = 1;
-        if (device->ProvidesSource(cSource::FromString("C"))) systems[SCAN_CABLE         ] = 1;
-        }
+     if (device == NULL)        
+        continue;
+
+     if (device->ProvidesSource(cSource::FromString("A"))) systems[SCAN_TERRCABLE_ATSC] = 1;
+     if (device->ProvidesSource(cSource::FromString("C"))) systems[SCAN_CABLE]          = 1;
+     if (device->ProvidesSource(cSource::FromString("S"))) systems[SCAN_SATELLITE]      = 1;
+     if (device->ProvidesSource(cSource::FromString("T"))) systems[SCAN_TERRESTRIAL]    = 1;
      }
 
   if (DVB_Type >= SCAN_NO_DEVICE || ! systems[DVB_Type]) {
@@ -101,6 +95,17 @@ void _log(const char* function, int line, const int level, bool newline, const c
         break;
      case SYSLOG:
         syslog(LOG_DEBUG, "%s", msg);
+        break;
+     case STDERR: {
+        char tmbuf[9];
+        time_t now = time(NULL);
+        strftime(tmbuf, sizeof(tmbuf), "%H:%M:%S", localtime(&now));
+        if (wSetup.verbosity < 5)
+           fprintf(stderr, "%s %s%s", tmbuf, msg, newline?"\n":"");
+        else
+           fprintf(stderr, "%s %-40s:%d %s%s", tmbuf, function, line, msg, newline?"\n":"");
+        fflush(stdout);
+        }
         break;
      }
 

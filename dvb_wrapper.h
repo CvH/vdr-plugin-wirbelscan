@@ -10,6 +10,8 @@
 #include <vdr/dvbdevice.h>
 #include "extended_frontend.h"
 
+cDvbDevice* GetDvbDevice(cDevice* d);
+
 void PrintDvbApi(std::string& s);
 
 // DVB frontend capabilities
